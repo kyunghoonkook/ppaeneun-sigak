@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>빼는 시각 · 올림픽공원 주차장 출차 시계</title>
+<style>
+:root{--bg:#141414;--panel:#1f1f1f;--line:#333;--ink:#f2f2f2;--dim:#9a9a9a;--sign:#ffd400;--avg:#4fb3ff;--hot:#ff5a36}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif}
+header{background:var(--sign);color:#111;padding:18px 20px 14px}
+header .wrap{max-width:1080px;margin:0 auto;display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.p{font:900 46px/1 "Arial Black",sans-serif;background:#111;color:var(--sign);width:62px;height:62px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+h1{margin:0;font-size:30px;letter-spacing:-.5px}
+header small{display:block;font-size:14px;margin-top:4px}
+main{max-width:1080px;margin:0 auto;padding:18px 20px 60px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:10px 0 18px}
+.wk{font-size:12px;color:var(--dim);text-align:center}
+.day{background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:8px 0 6px;border-radius:4px;cursor:pointer;font-size:15px;text-align:center;position:relative}
+.day b{display:block;font-size:11px;color:var(--dim);font-weight:400;margin-top:2px}
+.day.hot b{color:var(--hot);font-weight:700}
+.day.on{background:var(--sign);color:#111;border-color:var(--sign)}
+.day.on.hot b{color:#b3200b}
+.day.on b{color:#111}
+.board{background:#0c0c0c;border:2px solid #2b2b2b;border-radius:6px;padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cell .k{font-size:13px;color:var(--dim)}
+.cell .v{font:700 30px/1.15 ui-monospace,"SF Mono",Menlo,monospace;color:var(--sign);margin-top:4px}
+.cell .s{font-size:13px;color:var(--ink);margin-top:4px}
+.chartbox{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-top:14px;padding:12px 12px 4px}
+.legend{font-size:13px;color:var(--dim);display:flex;gap:16px;flex-wrap:wrap;margin:0 4px 8px}
+.legend i{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:5px}
+svg{width:100%;height:auto;display:block}
+.tabs{display:flex;gap:6px;margin-top:10px}
+.tabs button{background:transparent;color:var(--ink);border:1px solid var(--line);padding:6px 12px;border-radius:4px;cursor:pointer}
+.tabs button.on{border-color:var(--sign);color:var(--sign)}
+h2{font-size:20px;margin:36px 0 6px}
+p.lead{color:#cfcfcf;line-height:1.65;margin:4px 0 12px;max-width:760px}
+.note{font-size:13px;color:var(--dim);line-height:1.7;border-top:1px solid var(--line);margin-top:36px;padding-top:14px}
+.note a{color:var(--dim)}
+@media (max-width:680px){h1{font-size:22px}.p{width:48px;height:48px;font-size:34px}.board{grid-template-columns:1fr}.cell .v{font-size:26px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="p">P</div><div><h1>빼는 시각</h1><small>올림픽공원 주차장, 오늘 밤 차는 언제 빼야 덜 막힐까</small></div></div></header>
+<main>
+<p class="lead">2024년 7월 한 달 동안 동2문·남2문·북2문 주차구역을 드나든 차 215,528대의 입차·출차 시각을 10분 단위로 셌습니다. 날짜를 누르면 그날 밤 출차가 몇 시에 몰렸는지, 같은 요일 평소와 비교해 언제쯤 평소 수준으로 빠졌는지 보여 줍니다. '몰린 밤'은 밤 9시부터 자정까지 나간 차가 같은 요일 평소의 1.5배를 넘은 날입니다. 같은 요일 평균에는 고른 날을 빼고 계산합니다.</p>
+<div class="days" id="days"></div>
+<div class="board" id="board"></div>
+<div class="tabs"><button data-r="night" class="on">저녁 18시~24시</button><button data-r="all">하루 전체</button></div>
+<div class="chartbox"><div class="legend"><span><i style="background:var(--sign)"></i>선택한 날 출차</span><span><i style="background:var(--avg)"></i>같은 요일 평균</span><span><i style="background:var(--hot)"></i>가장 몰린 10분</span></div><svg id="chart" viewBox="0 0 1000 340"></svg></div>
+
+<h2>들어왔다 10분 안에 나간 차가 세 대 중 한 대</h2>
+<p class="lead" id="shortLead"></p>
+<div class="chartbox"><svg id="short" viewBox="0 0 1000 260"></svg></div>
+
+<h2>월별 주차대수, 올림픽공원과 미사경정공원</h2>
+<p class="lead">같은 기관이 따로 개방한 월별 주차현황입니다. 2023년부터 2025년까지 36개월을 겹쳐 그렸습니다.</p>
+<div class="chartbox"><svg id="mon" viewBox="0 0 1000 280"></svg></div>
+
+<div class="note" id="note"></div>
+</main>
+<script>
+const W=['일','월','화','수','목','금','토'];
+const f=s=>String(Math.floor(s/6)).padStart(2,'0')+':'+String(s%6*10).padStart(2,'0');
+let D,sel='2024-07-20',range='night';
+fetch('data.json').then(r=>r.json()).then(d=>{D=d;prep();draw();drawShort();drawMon();note();});
+function wd(k){return new Date(k+'T00:00:00+09:00').getDay()}
+function prep(){
+  D.days=Object.keys(D.ex).sort();
+  D.avg={};
+  for(let w=0;w<7;w++){const ds=D.days.filter(k=>wd(k)===w);D.avg[w]=Array.from({length:144},(_,s)=>ds.reduce((a,k)=>a+D.ex[k][s],0)/ds.length);}
+  D.eve={};D.days.forEach(k=>{D.eve[k]=D.ex[k].slice(126,144).reduce((a,b)=>a+b,0);});
+  D.hot={};for(let w=0;w<7;w++){const ds=D.days.filter(k=>wd(k)===w);const m=ds.map(k=>D.eve[k]).sort((a,b)=>a-b);const med=m[Math.floor(m.length/2)];ds.forEach(k=>D.hot[k]=D.eve[k]>=med*1.5);}
+  const box=document.getElementById('days');
+  box.innerHTML=W.map(w=>`<div class="wk">${w}</div>`).join('');
+  const first=wd(D.days[0]);for(let i=0;i<first;i++)box.innerHTML+='<div></div>';
+  D.days.forEach(k=>{const b=document.createElement('button');b.className='day'+(D.hot[k]?' hot':'');b.dataset.k=k;b.innerHTML=`${+k.slice(8)}<b>${D.hot[k]?'몰린 밤':D.ex[k].reduce((a,c)=>a+c,0).toLocaleString()+'대'}</b>`;b.onclick=()=>{sel=k;draw()};box.appendChild(b);});
+  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{range=b.dataset.r;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));draw();});
+}
+function draw(){
+  document.querySelectorAll('.day').forEach(b=>b.classList.toggle('on',b.dataset.k===sel));
+  const e=D.ex[sel];const od=D.days.filter(k=>wd(k)===wd(sel)&&k!==sel);const a=Array.from({length:144},(_,s)=>od.reduce((x,k)=>x+D.ex[k][s],0)/od.length);
+  const s0=range==='night'?108:0,s1=144;
+  let pk=120;for(let s=120;s<144;s++)if(e[s]>e[pk])pk=s;
+  let back=null;for(let s=pk+1;s<144;s++){if(e[s]<=a[s]*1.3+5){back=s;break;}}
+  const sum40=e.slice(pk-1,pk+3).reduce((x,y)=>x+y,0),avg40=Math.round(a.slice(pk-1,pk+3).reduce((x,y)=>x+y,0));
+  const dd=new Date(sel+'T00:00:00+09:00');
+  document.getElementById('board').innerHTML=`
+   <div class="cell"><div class="k">${dd.getMonth()+1}월 ${dd.getDate()}일 ${W[dd.getDay()]}요일 저녁, 가장 몰린 10분</div><div class="v">${f(pk)} · ${e[pk]}대</div><div class="s">같은 요일 평균은 그 시각 ${Math.round(a[pk])}대</div></div>
+   <div class="cell"><div class="k">몰린 시각 앞뒤 40분 출차</div><div class="v">${sum40.toLocaleString()}대</div><div class="s">평소 같은 40분은 ${avg40}대, ${(sum40/Math.max(avg40,1)).toFixed(1)}배</div></div>
+   <div class="cell"><div class="k">평소 수준으로 돌아온 시각</div><div class="v">${back?f(back):'자정 넘어'}</div><div class="s">${back?`가장 몰린 때보다 ${(back-pk)*10}분 뒤에 나가면 됐습니다`:'그날은 자정까지 평소보다 많았습니다'}</div></div>`;
+  const n=s1-s0,bw=1000/n,mx=Math.max(...e.slice(s0),...a.slice(s0))*1.1,H=300,y=v=>H-v/mx*(H-20);
+  let g='';
+  for(let v=0;v<mx;v+=(mx>200?100:50))g+=`<line x1="0" x2="1000" y1="${y(v)}" y2="${y(v)}" stroke="#2c2c2c"/><text x="4" y="${y(v)-3}" fill="#777" font-size="11">${v}</text>`;
+  for(let s=s0;s<s1;s++){const x=(s-s0)*bw;g+=`<rect x="${x+1}" y="${y(e[s])}" width="${bw-2}" height="${H-y(e[s])}" fill="${s===pk?'#ff5a36':'#ffd400'}"><title>${f(s)} ${e[s]}대</title></rect>`;if(s%6===0)g+=`<text x="${x}" y="322" fill="#9a9a9a" font-size="12">${s/6}시</text>`;}
+  g+=`<polyline fill="none" stroke="#4fb3ff" stroke-width="2.5" points="${a.slice(s0).map((v,i)=>`${i*bw+bw/2},${y(v)}`).join(' ')}"/>`;
+  if(back&&back>=s0)g+=`<line x1="${(back-s0)*bw}" x2="${(back-s0)*bw}" y1="10" y2="${H}" stroke="#f2f2f2" stroke-dasharray="4 4"/><text x="${(back-s0)*bw+4}" y="22" fill="#f2f2f2" font-size="12">여기부터 평소 수준</text>`;
+  document.getElementById('chart').innerHTML=g;
+}
+function drawShort(){
+  const r=D.h.map((t,i)=>t?D.hs[i]/t:0),tot=D.hs.reduce((a,b)=>a+b,0);
+  document.getElementById('shortLead').textContent=`한 달 215,528건 가운데 ${tot.toLocaleString()}건, ${(tot/D.total*100).toFixed(1)}%가 들어온 지 10분 안에 나갔습니다. 아침 8시대에는 7,120대가 그랬고, 밤 9시 이후에는 절반 가까이가 짧게 머물렀습니다. 사람을 내려 주거나 태우러 온 차로 보입니다. 이런 차가 몰리는 시간에 승하차 전용 구역을 따로 두면 주차를 하려는 차와 줄이 갈라집니다.`;
+  const H=220,bw=1000/24;let g='';
+  r.forEach((v,i)=>{const hh=v*H*1.5;g+=`<rect x="${i*bw+3}" y="${H-hh}" width="${bw-6}" height="${hh}" fill="${v>=.4?'#ff5a36':'#ffd400'}"><title>${i}시 입차 ${D.h[i]}대 중 ${D.hs[i]}대</title></rect><text x="${i*bw+bw/2}" y="${H-hh-4}" fill="#cfcfcf" font-size="11" text-anchor="middle">${Math.round(v*100)}</text><text x="${i*bw+bw/2}" y="246" fill="#9a9a9a" font-size="11" text-anchor="middle">${i}</text>`;});
+  document.getElementById('short').innerHTML=g+`<text x="996" y="12" fill="#777" font-size="11" text-anchor="end">입차 시각별, 10분 안에 나간 차 비율(%)</text>`;
+}
+function drawMon(){
+  const o=D.mon.filter(r=>r[2]==='올림픽공원').map(r=>+r[3]),m=D.mon.filter(r=>r[2]==='미사경정공원').map(r=>+r[3]);
+  const mx=Math.max(...o,...m)*1.1,H=240,bw=1000/36,y=v=>H-v/mx*(H-10);
+  let g='';[0,50000,100000].forEach(v=>g+=`<line x1="0" x2="1000" y1="${y(v)}" y2="${y(v)}" stroke="#2c2c2c"/><text x="4" y="${y(v)-3}" fill="#777" font-size="11">${v/10000}만</text>`);
+  g+=`<polyline fill="none" stroke="#ffd400" stroke-width="3" points="${o.map((v,i)=>`${i*bw+bw/2},${y(v)}`).join(' ')}"/>`;
+  g+=`<polyline fill="none" stroke="#4fb3ff" stroke-width="3" points="${m.map((v,i)=>`${i*bw+bw/2},${y(v)}`).join(' ')}"/>`;
+  ['2023','2024','2025'].forEach((t,i)=>g+=`<text x="${i*12*bw+4}" y="266" fill="#9a9a9a" font-size="12">${t}년 1월</text>`);
+  g+=`<text x="996" y="14" fill="#ffd400" font-size="12" text-anchor="end">올림픽공원</text><text x="996" y="30" fill="#4fb3ff" font-size="12" text-anchor="end">미사경정공원</text>`;
+  document.getElementById('mon').innerHTML=g;
+}
+function note(){
+  document.getElementById('note').innerHTML=`데이터: 공공데이터포털 한국체육산업개발주식회사_올림픽공원 입출차 정보_20240731, 월별주차현황_20251231, 영문 공연정보_20260901. 모두 이용허락범위 제한 없음.<br>
+  확인한 한계: 입출차 정보는 7월 한 달 215,528건인데 같은 기관 월별주차현황의 2024년 7월 올림픽공원은 59,808대입니다. 짧게 머문 차를 빼고 센 숫자로 보이지만 기준이 적혀 있지 않습니다. 영문 공연정보의 공연일자 칸은 여러 공연이 같은 날짜로 묶여 있어 게시일로 보이며, 실제 공연일과 맞춰 쓰지 않았습니다. 그래서 몰린 밤은 공연 일정이 아니라 출차 숫자로만 찾습니다.<br>
+  만든 사람: 국경훈 · 2026년 공공데이터 활용 경진대회 출품작`;
+}
+</script>
+</body>
+</html>
